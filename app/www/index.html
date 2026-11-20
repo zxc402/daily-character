@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1f3b">
+<title>오늘의 캐릭터</title>
+<style>
+:root{--bg:#1b1f3b;--bg2:#262b52;--ivory:#f3e9d2;--ink:#1b1f3b;--mint:#3ddc97;--mute:#9aa0c7;--danger:#ff6b6b}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ivory);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);display:flex;flex-direction:column;align-items:center}
+.wrap{width:100%;max-width:520px;padding:20px 20px 32px;flex:1}
+header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px}
+header h1{font-size:1.1rem;font-weight:700}
+#date{color:var(--mute);font-size:.9rem}
+nav{display:flex;gap:6px;background:var(--bg2);padding:4px;border-radius:12px;margin-bottom:24px}
+nav button{flex:1;padding:10px;border:0;border-radius:9px;background:none;color:var(--mute);font:inherit;font-weight:600;cursor:pointer}
+nav button[aria-selected=true]{background:var(--ivory);color:var(--ink)}
+button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid var(--mint);outline-offset:2px}
+.scene{perspective:1200px}
+.card{background:var(--ivory);color:var(--ink);border-radius:22px;padding:14px 14px 18px;box-shadow:0 18px 40px rgba(0,0,0,.45);transform-style:preserve-3d}
+.card.flip{animation:flip .9s cubic-bezier(.2,.8,.2,1)}
+@keyframes flip{from{transform:rotateY(180deg) scale(.92);opacity:0}to{transform:none;opacity:1}}
+.card .pic{aspect-ratio:3/4;border-radius:12px;background:#d9ceb2 center/cover no-repeat}
+.card h2{font-size:1.6rem;text-align:center;margin-top:16px}
+.empty{text-align:center;color:var(--mute);padding:48px 12px;line-height:1.7}
+.empty b{color:var(--ivory)}
+.hint{text-align:center;color:var(--mute);font-size:.85rem;margin-top:14px}
+form{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.file{display:block;padding:14px;border:2px dashed var(--mute);border-radius:12px;text-align:center;color:var(--mute);cursor:pointer}
+.file input{display:none}
+input[type=text]{padding:12px;border-radius:10px;border:0;background:var(--bg2);color:var(--ivory);font:inherit}
+.primary{padding:12px;border:0;border-radius:10px;background:var(--mint);color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
+.primary:disabled{opacity:.4;cursor:default}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.item{background:var(--bg2);border-radius:12px;overflow:hidden}
+.item .pic{aspect-ratio:3/4;background:center/cover no-repeat}
+.item .row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;gap:6px}
+.item span{font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item button{background:none;border:0;color:var(--danger);font:inherit;font-size:.85rem;cursor:pointer;flex:none}
+.count{color:var(--mute);font-size:.85rem;margin-bottom:10px}
+[hidden]{display:none!important}
+.pic.ph,.item .pic.ph{background:#d9ceb2;display:flex;align-items:center;justify-content:center;font-size:3.5rem;font-weight:700;color:var(--ink)}
+.item .row button{padding:2px 4px}.item .row .edit{color:var(--mint)}.item .acts{display:flex;gap:6px}
+dialog{margin:auto;border:0;border-radius:16px;padding:20px;background:var(--bg2);color:var(--ivory);width:min(92vw,400px)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog form{margin:0}dialog h3{font-size:1.05rem}
+dialog label.chk{display:flex;gap:8px;align-items:center;color:var(--mute);font-size:.9rem}
+.btns{display:flex;gap:8px}.btns button{flex:1}.ghost{padding:12px;border:1px solid var(--mute);border-radius:10px;background:none;color:var(--ivory);font:inherit;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.card.flip{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>오늘의 캐릭터</h1><span id="date"></span></header>
+  <nav role="tablist">
+    <button role="tab" id="t-today" aria-selected="true">오늘</button>
+    <button role="tab" id="t-list" aria-selected="false">내 캐릭터</button>
+  </nav>
+
+  <main id="v-today">
+    <div class="scene"><div class="card" id="card" hidden><div class="pic" id="pic"></div><h2 id="name"></h2></div></div>
+    <p class="hint" id="hint" hidden>자정에 새 캐릭터로 바뀝니다.</p>
+    <div class="empty" id="empty" hidden><b>등록된 캐릭터가 없습니다.</b><br>'내 캐릭터'에서 사진과 이름을 추가하세요.</div>
+  </main>
+
+  <main id="v-list" hidden>
+    <form id="form">
+      <label class="file"><input type="file" id="file" accept="image/*" multiple><span id="fileLabel">사진 선택 (선택사항, 여러 장 가능)</span></label>
+      <input type="text" id="nameInput" placeholder="이름 (사진 없이도 추가 가능)" maxlength="40" autocomplete="off">
+      <button class="primary" id="add" disabled>추가</button>
+    </form>
+    <p class="count" id="count"></p>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<dialog id="dlg"><form id="eform">
+  <h3>캐릭터 수정</h3>
+  <input type="text" id="eName" maxlength="40" autocomplete="off" placeholder="이름">
+  <label class="file"><input type="file" id="eFile" accept="image/*"><span id="eLabel">사진 변경 (선택)</span></label>
+  <label class="chk" id="eClearWrap"><input type="checkbox" id="eClear"> 사진 제거</label>
+  <div class="btns"><button type="button" class="ghost" id="eCancel">취소</button><button class="primary">저장</button></div>
+</form></dialog>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let db, urls=[], shownDate=null;
+
+// ---- IndexedDB ----
+const open=()=>new Promise((res,rej)=>{
+  const r=indexedDB.open('daily-character',1);
+  r.onupgradeneeded=()=>{r.result.createObjectStore('chars',{keyPath:'id'});r.result.createObjectStore('meta')};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
+});
+const tx=(s,m,fn)=>new Promise((res,rej)=>{
+  const t=db.transaction(s,m),st=t.objectStore(s),q=fn(st);
+  t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);
+});
+const allChars=()=>tx('chars','readonly',s=>s.getAll()).then(a=>a.sort((x,y)=>x.createdAt-y.createdAt));
+const getPick=()=>tx('meta','readonly',s=>s.get('pick'));
+const setPick=p=>tx('meta','readwrite',s=>s.put(p,'pick'));
+
+// ---- helpers ----
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const url=b=>{const u=URL.createObjectURL(b);urls.push(u);return u};
+const clearUrls=()=>{urls.forEach(URL.revokeObjectURL);urls=[]};
+function setPic(el,c){
+  if(c.blob){el.classList.remove('ph');el.textContent='';el.style.backgroundImage=`url(${url(c.blob)})`}
+  else{el.classList.add('ph');el.style.backgroundImage='none';el.textContent=[...c.name][0]||'?'}
+}
+function shrink(file,max=900){
+  return new Promise((res,rej)=>{
+    const img=new Image(),u=URL.createObjectURL(file);
+    img.onload=()=>{
+      const k=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(new Error('변환 실패')),'image/jpeg',.88);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('이미지를 읽을 수 없습니다'))};
+    img.src=u;
+  });
+}
+
+// ---- today's pick ----
+async function renderToday(animate){
+  const chars=await allChars(),d=today();
+  $('date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'});
+  shownDate=d;
+  const card=$('card');
+  if(!chars.length){card.hidden=true;$('hint').hidden=true;$('empty').hidden=false;return}
+  $('empty').hidden=true;
+  let p=await getPick(),c=p&&p.date===d&&chars.find(x=>x.id===p.id);
+  let fresh=false;
+  if(!c){c=chars[Math.floor(Math.random()*chars.length)];await setPick({date:d,id:c.id});fresh=true}
+  clearUrls();
+  setPic($('pic'),c);
+  $('name').textContent=c.name;
+  card.hidden=false;$('hint').hidden=false;
+  card.classList.remove('flip');
+  if(fresh||animate){void card.offsetWidth;card.classList.add('flip')}
+}
+
+// ---- list ----
+async function renderList(){
+  const chars=await allChars();
+  $('count').textContent=chars.length?`${chars.length}명 등록됨`:'아직 등록된 캐릭터가 없습니다.';
+  const g=$('grid');g.textContent='';
+  const tmp=urls;urls=[];
+  for(const c of chars){
+    const el=document.createElement('div');el.className='item';
+    const pic=document.createElement('div');pic.className='pic';setPic(pic,c);
+    const row=document.createElement('div');row.className='row';
+    const nm=document.createElement('span');nm.textContent=c.name;nm.title=c.name;
+    const ed=document.createElement('button');ed.textContent='수정';ed.className='edit';ed.onclick=()=>openEdit(c);
+    const del=document.createElement('button');del.textContent='삭제';
+    del.onclick=async()=>{
+      if(!confirm(`'${c.name}'을(를) 삭제할까요?`))return;
+      await tx('chars','readwrite',s=>s.delete(c.id));
+      const p=await getPick();
+      if(p&&p.id===c.id)await tx('meta','readwrite',s=>s.delete('pick'));
+      renderList();
+    };
+    const acts=document.createElement('div');acts.className='acts';acts.append(ed,del);row.append(nm,acts);el.append(pic,row);g.append(el);
+  }
+  tmp.forEach(URL.revokeObjectURL);
+}
+
+// ---- add ----
+const newId=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+Math.random().toString(16);
+const fileEl=$('file'),addBtn=$('add');
+const upd=()=>{addBtn.disabled=!(fileEl.files.length||$('nameInput').value.trim())};
+fileEl.onchange=()=>{
+  const n=fileEl.files.length;
+  $('fileLabel').textContent=n?`${n}장 선택됨`:'사진 선택 (선택사항, 여러 장 가능)';
+  upd();
+};
+$('nameInput').oninput=upd;
+$('form').onsubmit=async e=>{
+  e.preventDefault();
+  const files=[...fileEl.files];
+  const typed=$('nameInput').value.trim();
+  if(!files.length&&!typed)return;
+  addBtn.disabled=true;addBtn.textContent='추가 중...';
+  let fail=0;
+  if(!files.length){
+    await tx('chars','readwrite',s=>s.put({id:newId(),name:typed,blob:null,createdAt:Date.now()}));
+  }
+  for(const f of files){
+    try{
+      const blob=await shrink(f);
+      const name=(files.length===1&&typed)||f.name.replace(/\.[^.]+$/,'');
+      await tx('chars','readwrite',s=>s.put({id:newId(),name,blob,createdAt:Date.now()}));
+    }catch(err){fail++}
+  }
+  fileEl.value='';$('nameInput').value='';fileEl.onchange();
+  addBtn.textContent='추가';
+  if(fail)alert(`${fail}장은 추가하지 못했습니다.`);
+  renderList();
+};
+
+// ---- edit ----
+let editing=null;
+function openEdit(c){
+  editing=c;$('eName').value=c.name;$('eFile').value='';$('eLabel').textContent='사진 변경 (선택)';
+  $('eClear').checked=false;$('eClearWrap').hidden=!c.blob;$('dlg').showModal();
+}
+$('eFile').onchange=()=>{$('eLabel').textContent=$('eFile').files.length?'새 사진 선택됨':'사진 변경 (선택)'};
+$('eCancel').onclick=()=>$('dlg').close();
+$('eform').onsubmit=async e=>{
+  e.preventDefault();
+  const name=$('eName').value.trim();if(!name){$('eName').focus();return}
+  const f=$('eFile').files[0];let blob=editing.blob;
+  try{if(f)blob=await shrink(f);else if($('eClear').checked)blob=null}catch(err){alert(err.message);return}
+  await tx('chars','readwrite',s=>s.put({...editing,name,blob}));
+  $('dlg').close();renderList();
+};
+
+// ---- tabs ----
+function tab(name){
+  const t=name==='today';
+  $('v-today').hidden=!t;$('v-list').hidden=t;
+  $('t-today').setAttribute('aria-selected',t);$('t-list').setAttribute('aria-selected',!t);
+  t?renderToday():renderList();
+}
+$('t-today').onclick=()=>tab('today');
+$('t-list').onclick=()=>tab('list');
+
+// 자정이 지난 뒤 앱으로 돌아오면 갱신
+const check=()=>{if(shownDate&&shownDate!==today()&&!$('v-today').hidden)renderToday()};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)check()});
+setInterval(check,60000);
+
+open().then(d=>{db=d;if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();return renderToday()})
+.catch(e=>{document.querySelector('.wrap').insertAdjacentHTML('beforeend','<p class="empty">저장소를 열 수 없습니다: '+e.message+'</p>')});
+})();
+</script>
+</body>
+</html>
